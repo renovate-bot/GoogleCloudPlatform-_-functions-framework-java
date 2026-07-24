@@ -72,25 +72,27 @@ gpg --batch --import "${GPG_KEYRING}"
 # ==============================================================================
 # 3. Build, Sign, and Deploy
 # ==============================================================================
-# Detect which package to build based on the Louhi trigger tag
-if [[ -n "${_LOUHI_REF_NAME:-}" ]]; then
-  echo "Triggered by Louhi tag: ${_LOUHI_REF_NAME}"
-  if [[ "${_LOUHI_REF_NAME}" == *functions-framework-api* ]]; then
+# Detect which package to build based on Louhi tag or changed files
+TAG_NAME="${_LOUHI_TAG_NAME:-${_LOUHI_REF_NAME:-}}"
+
+if [[ -n "${TAG_NAME}" && "${TAG_NAME}" != "main" && "${TAG_NAME}" != "master" ]]; then
+  echo "Detected release tag: ${TAG_NAME}"
+  if [[ "${TAG_NAME}" == *functions-framework-api* ]]; then
     PACKAGE_DIR="functions-framework-api"
-  elif [[ "${_LOUHI_REF_NAME}" == *function-maven-plugin* ]]; then
+  elif [[ "${TAG_NAME}" == *function-maven-plugin* ]]; then
     PACKAGE_DIR="function-maven-plugin"
-  elif [[ "${_LOUHI_REF_NAME}" == *java-function-invoker* ]]; then
+  elif [[ "${TAG_NAME}" == *java-function-invoker* ]]; then
     PACKAGE_DIR="invoker"
   else
-    echo "Unknown tag format: ${_LOUHI_REF_NAME}. Defaulting to invoker."
+    echo "Unknown tag format: ${TAG_NAME}. Defaulting to invoker."
     PACKAGE_DIR="invoker"
   fi
 else
-  # Fallback for manual/non-tag builds (e.g. testing)
-  echo "No Louhi tag detected. Falling back to KOKORO_JOB_NAME detection."
-  if [[ $KOKORO_JOB_NAME == *"function-maven-plugin"* ]]; then
+  # Fallback: inspect changed files in release commit (_LOUHI_CHANGED_FILES)
+  echo "No specific release tag detected. Inspecting _LOUHI_CHANGED_FILES: ${_LOUHI_CHANGED_FILES:-}"
+  if [[ "${_LOUHI_CHANGED_FILES:-}" == *function-maven-plugin* ]]; then
     PACKAGE_DIR="function-maven-plugin"
-  elif [[ $KOKORO_JOB_NAME == *"functions-framework-api"* ]]; then
+  elif [[ "${_LOUHI_CHANGED_FILES:-}" == *functions-framework-api* ]]; then
     PACKAGE_DIR="functions-framework-api"
   else
     PACKAGE_DIR="invoker"
